@@ -9,9 +9,9 @@ import copy
 class Triple:
 
     def __init__(self, s, p, o):
-        self.s = s
-        self.o = o
-        self.p = p
+        self.subject = s
+        self.object = o
+        self.predicate = p
 
     def flat_triple(self):
         return self.s + ' | ' + self.p + ' | ' + self.o
@@ -404,3 +404,7 @@ def select_files(topdir, category='', size=(1, 8)):
         finalfiles += [(item, filename) for filename in sorted(listdir(item)) if category in filename and '.xml' in filename]
     return finalfiles
 
+
+def select_test_files(topdir):
+    finalfiles = [(topdir, filename) for filename in listdir(topdir) if '.xml' in filename]
+    return finalfiles

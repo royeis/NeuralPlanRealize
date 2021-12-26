@@ -1,5 +1,5 @@
 import torch
-from torch.nn import CrossEntropyLoss
+from sacrebleu import corpus_bleu
 
 def triple_to_string(triple):
     return '<S> ' + triple.subject + ' <P> ' + triple.predicate + ' <O> ' + triple.object
@@ -33,7 +33,20 @@ def ordered_tripleset_to_string(ordered_tripleset):
     sentence_triplesets = ['<sentence> ' + tripleset_to_string(t_set) for t_set in ordered_tripleset]
     return ' '.join(sentence_triplesets)
 
+def webnlg_entry_to_examples(entry):
+    examples = []
+    for lex in entry.lexs:
+        example = {}
+        example['category'] = entry.category
+        example['eid'] = entry.id
+        example['size'] = entry.size
+        example['triples_map'] = tripleset_map(entry.modifiedtripleset.triples)
+        example['input'] = tripleset_to_string(entry.modifiedtripleset.triples)
+        example['lid'] = lex.id
+        example['text'] = lex.lex
+        examples.append(example)
 
+    return examples
 
 def deepnlg_entry_to_examples(entry):
     examples = []
@@ -51,6 +64,13 @@ def deepnlg_entry_to_examples(entry):
         examples.append(example)
 
     return examples
+
+
+def validate_plan(plan, n_triples):
+    plan_set = set(plan.split())
+    plan_set.remove('S')
+    expected = set([str(i) for i in range(n_triples)])
+    return plan_set == expected
 
 class PlannerDataset(torch.utils.data.Dataset):
     def __init__(self, examples, tokenizer):
@@ -105,3 +125,15 @@ def T2TDataCollator(batch):
         'labels': lm_labels,
         'decoder_attention_mask': decoder_attention_mask
     }
+
+def compute_bleu(generations, references):
+    max_entry_refs = max([len(r) for r in references])
+    grouped_refs = [[] for i in range(max_entry_refs)]
+    for ref_group in references:
+        for i in range(max_entry_refs):
+            if i < len(ref_group):
+                grouped_refs[i].append(ref_group[i])
+            else:
+                grouped_refs[i].append('')
+    
+    return corpus_bleu(generations, grouped_refs).score
